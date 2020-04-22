@@ -57,8 +57,50 @@ callr::r(function()  # This is to run in a separate R session
   pins::pin_get("expensive_result")
 )
 
-# Your thing is stored in pins cache
+# Your thing is now stored in pins's cache
 fs::dir_tree(pins::board_cache_path())
+
+# Pin resources from GitHub -----------------------------------------------
+
+# You can store and pin datasets on public and private GitHub repos
+
+# 1. Create an empty GitHub repo 
+# I did it from the terminal with:
+#   gh repo create maurolepore/demo-pin1
+#   gh repo create maurolepore/demo-pin2 --public
+browseURL("https://github.com/maurolepore/demo-pin1")
+browseURL("https://github.com/maurolepore/demo-pin2")
+
+# 2. Register "github" and the specific "owner/repo"
+pins::board_list()
+pins::board_register("github", repo = "maurolepore/demo-pin1")
+pins::board_register("github", repo = "maurolepore/demo-pin2")
+pins::board_list()
+
+datasets::BOD %>% 
+  pins::pin(
+    name = "my_bod", 
+    description = "My copy of `datasets::BOD`",
+    board = "github", 
+    repo = "maurolepore/demo-pin1"
+)
+
+datasets::iris %>% 
+  pins::pin(
+    name = "my_iris", 
+    description = "My copy of `datasets::iris`.",
+    board = "github", 
+    repo = "maurolepore/demo-pin2"
+  )
+
+pins::pin_find("datasets", board = "github")
+
+# If the resource is gone, you can still get it from your cache
+fs::dir_tree(pins::board_cache_path())
+
+read_rds(
+  fs::path_home(".cache", "pins", "github", "my_bod", "data.rds")
+)
 
 # Cleanup -----------------------------------------------------------------
 
@@ -67,6 +109,18 @@ fs::dir_tree(pins::board_cache_path())
 pins::pin_remove("expensive_result", board = "local")
 pins::pin_remove("mtcars", board = "local")
 
+fs::dir_tree(pins::board_cache_path())
+
+# You can remove pins from GitHub, but they stay in locall cache
+pins::pin_remove("my_iris", board = "github")
+pins::pin_remove("my_bod", board = "github")
+browseURL("https://github.com/maurolepore/demo-pin1")
+browseURL("https://github.com/maurolepore/demo-pin2")
+fs::dir_tree(pins::board_cache_path())
+
+pins::board_list()
+pins::board_deregister("github")
+pins::board_list()
 
 
 
@@ -74,6 +128,8 @@ pins::pin_remove("mtcars", board = "local")
 
 
 
+
+# Leftovers ---------------------------------------------------------------
 
 
 fs::dir_tree(pins::board_cache_path())
