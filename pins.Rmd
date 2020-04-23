@@ -98,8 +98,12 @@ git log --oneline
 ```
 
 ```{r, message=FALSE}
-my_data <- read_csv(pin(raw_url, board = "my_local_board"))
+my_data <- read_csv(pin(raw_url, name = "my_data", board = "my_local_board"))
 fs::dir_tree(my_cache)
+
+fs::dir_tree(
+  pins::board_cache_path()
+)
 ```
 
 ```{r, engine=bash}
