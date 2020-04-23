@@ -71,12 +71,12 @@ raw_url <-
 # First time
 system.time(read_csv(raw_url))
 #>    user  system elapsed 
-#>   0.079   0.025   0.174
+#>   0.083   0.013   0.163
 
 # Second time
 system.time(read_csv(raw_url))
 #>    user  system elapsed 
-#>   0.021   0.000   0.120
+#>   0.019   0.000   0.096
 ```
 
 A better way is to `pin()` the URL.
@@ -85,22 +85,22 @@ A better way is to `pin()` the URL.
 # First time
 system.time(read_csv(pin(raw_url)))
 #>    user  system elapsed 
-#>   0.026   0.004   0.089
+#>   0.028   0.004   0.088
 
 # Second time
 system.time(read_csv(pin(raw_url)))
 #>    user  system elapsed 
-#>   0.005   0.004   0.009
+#>   0.009   0.000   0.008
 ```
 
 The first time pins creates a cache in a local “board” and reuses it the
 second time – which runs faster.
 
 ``` r
-pins::board_default()
+board_default()
 #> [1] "local"
 
-fs::dir_tree(pins::board_cache_path())
+dir_tree(board_cache_path())
 #> /home/mauro/.cache/pins
 #> └── local
 #>     ├── data.txt
@@ -116,7 +116,7 @@ The default location for the local-board cache is convenient and
 sensible, but you may want to instead use another location.
 
 ``` r
-my_cache <- fs::path(tempdir(), "pins_cache")
+my_cache <- path(tempdir(), "pins_cache")
 board_register_local(
   name = "my_local_board", 
   cache = my_cache, 
@@ -165,7 +165,7 @@ my_data %>%
   # Cache new version
   pin(name = "my_data", board = "my_local_board") 
 
-history <- pins::pin_versions("my_data", board = "my_local_board")
+history <- pin_versions("my_data", board = "my_local_board")
 history
 #> # A tibble: 3 x 1
 #>   version
@@ -186,8 +186,8 @@ dim(pin_get("my_data", board = "my_local_board", version = older))
 In case you are curious, this is the structure of pins versions.
 
 ``` r
-fs::dir_tree(my_cache)
-#> /tmp/RtmpKNyRQV/pins_cache
+dir_tree(my_cache)
+#> /tmp/RtmpxtEBJ5/pins_cache
 #> └── my_local_board
 #>     ├── data.txt
 #>     ├── data.txt.lock
