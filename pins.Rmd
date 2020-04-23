@@ -33,13 +33,8 @@ Here I also use a few other packages for convenience.
 ```{r}
 library(glue)
 library(readr)
-library(dplyr)
 library(fs)
-```
-
-```{r}
-# Where am I?
-demo <- here::here()
+library(dplyr, warn.conflicts = FALSE)
 ```
 
 ### Is low cost or better free
@@ -101,7 +96,10 @@ fs::dir_tree(my_cache)
 `versions = TRUE` enables [pins versions](https://pins.rstudio.com/articles/advanced-versions.html).
 
 ```{r}
-my_data %>% 
+read_csv(pin(raw_url)) %>% 
+  pin(name = "my_data", board = "my_local_board")
+
+pin_get("my_data", board = "my_local_board") %>% 
   filter(cyl > 6) %>% 
   pin(name = "my_data", board = "my_local_board") %>%  
   # Cache new version
@@ -109,8 +107,17 @@ my_data %>%
   # Cache new version
   pin(name = "my_data", board = "my_local_board") 
 
-pins::pin_versions("my_data", board = "my_local_board")
+history <- pins::pin_versions("my_data", board = "my_local_board")
+history
+
+latest <- history$version[1]
+dim(pin_get("my_data", board = "my_local_board", version = latest))
+
+older <- history$version[2]
+dim(pin_get("my_data", board = "my_local_board", version = older))
 ```
+
+In case you are curious, this is the structure of pins versions.
 
 ```{r}
 fs::dir_tree(my_cache)
@@ -120,13 +127,13 @@ fs::dir_tree(my_cache)
 
 For more control, initialize a Git repository in your pins cache.
 
-```{r, engine=bash}
+```{r, engine="/bin/bash"}
 git init /tmp/Rtmpdrvnwb/pins_cache
 ```
 
 On the terminal I can now change directory to my pins_cache, add all changes, commit, and inspect the log:
 
-```{r, engine=bash}
+```{r, engine="/bin/bash"}
 cd /tmp/Rtmpdrvnwb/pins_cache
 git add .
 git commit -m "Start tracking my cache with Git"
@@ -142,11 +149,11 @@ It is not pins job to control who reads or writes data but it plays well with to
 
 Pins has no limit but some boards do. [Azure](https://pins.rstudio.com/articles/boards-azure.html) is apparently limitless but charges for what it hosts. On [GitHub](https://pins.rstudio.com/articles/boards-github.html) pins can host files up to 2GB in both public and private repos.
 
+--
 
+Cleanup.
 
-Cleanup
-
-```{r, engine=bash}
+```{r, engine="/bin/bash"}
 trash /tmp/Rtmpdrvnwb/pins_cache
 ```
 
