@@ -11,8 +11,10 @@ Here I show how pins meets these requirements:
 - [x] Plays well with R.
 - [x] Is low cost or better free.
 - [x] Data hosted online can also be accessed from a local cache.
+- [x] Supports version control with Git.
+- [x] Plays well with GitHub.
+- [x] Plays well with Azure.
 - [x] Allows us to control permissions to read and write data.
-- [x] Supports version control with Git and GitHub.
 - [x] Can handle datasets of the maximum size we need.
 
 tl;dr:
@@ -132,13 +134,16 @@ git add .
 git commit -m "Start tracking my cache with Git"
 ```
 
-As usual, you may now push your Git repository to GitHub.
+### Plays well with GitHub
 
-But GitHub repos can better serve you as a pins board. This works both for public and private repos.
+GitHub is a tool we already use a lot and pins plays well with it. 
+
+If you track your cache with Git, you can now push it to GitHub. But GitHub repos can better serve you as a pins board. This works both for public and private repos.
 
 ```{r engine="/bin/bash", include=FALSE}
 gh repo create maurolepore/demo-board --public
 ```
+
 For example:
 
 ```{r}
@@ -168,6 +173,43 @@ Worst case scenario you can always get data directly from your local cache.
 dir_tree(my_cache)
 
 path(my_cache, "my_github_board", "my_data", "data.rds") %>% read_rds()
+```
+
+### Plays well with Azure
+
+Azure is important to us because the data managers use it. Data managers may then simply manage access permissions so the right people can access the data they need. Data users like analysts and software developers may then get the access key from Azure, store it safely in their file .Renviron (see [`usethis::edit_r_environ()`](https://usethis.r-lib.org/reference/edit.html)), and read and write data with `pins()`. This way we can use the same familiar `pins()` interface across boards (local, GitHub, Azure, and more) instead of learning a specialized interface (e.g. the [AzureStor](https://cran.r-project.org/web/packages/AzureStor/) package).
+
+Learn more about [Using Azure boards](https://pins.rstudio.com/articles/boards-azure.html).
+
+`board_register_azure()` requires a number of arguments, including secrets, that are best passed as environmental variables -- that is, stored them as key-value pairs in you .Renviron.
+
+```r
+# usethis::edit_r_environ()
+AZURE_STORAGE_CONTAINER="test-container"
+AZURE_STORAGE_ACCOUNT="2diiteststorage"
+# Not my real key
+AZURE_STORAGE_KEY="ABCABCABCABCABCABCABCABCABCAB=="
+```
+
+That setups simplifies how you register an Azure board.
+
+```{r}
+board_register_azure()
+```
+
+You can now pin resources to the Azure board.
+
+```{r}
+datasets::mtcars %>% 
+  pin(name = "iris", board = "azure", description = "My mtcars")
+```
+
+And you can also find and get resources from the Azure board.
+
+```{r}
+pin_find("mtcars", board = "azure")
+
+pin_get("mtcars", board = "azure")
 ```
 
 ### Allows us to control permissions to read and write data

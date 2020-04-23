@@ -11,8 +11,10 @@ Here I show how pins meets these requirements:
   - [x] Plays well with R.
   - [x] Is low cost or better free.
   - [x] Data hosted online can also be accessed from a local cache.
+  - [x] Supports version control with Git.
+  - [x] Plays well with GitHub.
+  - [x] Plays well with Azure.
   - [x] Allows us to control permissions to read and write data.
-  - [x] Supports version control with Git and GitHub.
   - [x] Can handle datasets of the maximum size we need.
 
 tl;dr:
@@ -121,6 +123,15 @@ board_default()
 
 dir_tree(board_cache_path())
 #> /home/mauro/.cache/pins
+#> ├── azure
+#> │   ├── data.txt
+#> │   ├── data.txt.lock
+#> │   ├── iris
+#> │   │   ├── data.rds
+#> │   │   └── data.txt
+#> │   └── mtcars
+#> │       ├── data.rds
+#> │       └── data.txt
 #> └── local
 #>     ├── data.txt
 #>     ├── data.txt.lock
@@ -173,7 +184,7 @@ In case you are curious, this is the structure of pins versions.
 
 ``` r
 dir_tree(my_cache)
-#> /tmp/Rtmp2e1HFX/pins_cache
+#> /tmp/RtmpZZyaEz/pins_cache
 #> └── my_local_board
 #>     ├── data.txt
 #>     ├── data.txt.lock
@@ -200,7 +211,7 @@ For more control, initialize a Git repository in your pins cache.
 # Set environmental variable so I can use it from the terminal
 Sys.setenv(MY_CACHE = my_cache)
 Sys.getenv("MY_CACHE")
-#> [1] "/tmp/Rtmp2e1HFX/pins_cache"
+#> [1] "/tmp/RtmpZZyaEz/pins_cache"
 ```
 
 From the terminal:
@@ -212,10 +223,13 @@ git add .
 git commit -m "Start tracking my cache with Git"
 ```
 
-As usual, you may now push your Git repository to GitHub.
+### Plays well with GitHub
 
-But GitHub repos can better serve you as a pins board. This works both
-for public and private repos.
+GitHub is a tool we already use a lot and pins plays well with it.
+
+If you track your cache with Git, you can now push it to GitHub. But
+GitHub repos can better serve you as a pins board. This works both for
+public and private repos.
 
 For example:
 
@@ -263,7 +277,7 @@ cache.
 
 ``` r
 dir_tree(my_cache)
-#> /tmp/Rtmp2e1HFX/pins_cache
+#> /tmp/RtmpZZyaEz/pins_cache
 #> ├── my_github_board
 #> │   ├── data.txt
 #> │   ├── data.txt.lock
@@ -288,6 +302,76 @@ dir_tree(my_cache)
 #>         └── data.txt
 
 path(my_cache, "my_github_board", "my_data", "data.rds") %>% read_rds()
+#> # A tibble: 32 x 11
+#>      mpg   cyl  disp    hp  drat    wt  qsec    vs    am  gear  carb
+#>    <dbl> <dbl> <dbl> <dbl> <dbl> <dbl> <dbl> <dbl> <dbl> <dbl> <dbl>
+#>  1  21       6  160    110  3.9   2.62  16.5     0     1     4     4
+#>  2  21       6  160    110  3.9   2.88  17.0     0     1     4     4
+#>  3  22.8     4  108     93  3.85  2.32  18.6     1     1     4     1
+#>  4  21.4     6  258    110  3.08  3.22  19.4     1     0     3     1
+#>  5  18.7     8  360    175  3.15  3.44  17.0     0     0     3     2
+#>  6  18.1     6  225    105  2.76  3.46  20.2     1     0     3     1
+#>  7  14.3     8  360    245  3.21  3.57  15.8     0     0     3     4
+#>  8  24.4     4  147.    62  3.69  3.19  20       1     0     4     2
+#>  9  22.8     4  141.    95  3.92  3.15  22.9     1     0     4     2
+#> 10  19.2     6  168.   123  3.92  3.44  18.3     1     0     4     4
+#> # … with 22 more rows
+```
+
+### Plays well with Azure
+
+Azure is important to us because the data managers use it. Data managers
+may then simply manage access permissions so the right people can access
+the data they need. Data users like analysts and software developers may
+then get the access key from Azure, stor it safely in their file
+.Renviron (see
+[`usethis::edit_r_environ()`](https://usethis.r-lib.org/reference/edit.html)),
+and read and write data with `pins()`. This way we can use the same
+familiar `pins()` interface across boards (local, GitHub, Azure, and
+more) instead of learning a specialized interface (e.g. the
+[AzureStor](https://cran.r-project.org/web/packages/AzureStor/)
+package).
+
+Learn more about [Using Azure
+boards](https://pins.rstudio.com/articles/boards-azure.html).
+
+`board_register_azure()` requires a number of arguments, including
+secrets, that are best passed as environmental variables – that is,
+stored them as key-value pairs in you .Renviron.
+
+``` r
+# usethis::edit_r_environ()
+AZURE_STORAGE_CONTAINER="test-container"
+AZURE_STORAGE_ACCOUNT="2diiteststorage"
+# Not my real key
+AZURE_STORAGE_KEY="ABCABCABCABCABCABCABCABCABCAB=="
+```
+
+That setups simplifies how you register an Azure board.
+
+``` r
+board_register_azure()
+```
+
+You can now pin resources to the Azure board.
+
+``` r
+datasets::mtcars %>% 
+  pin(name = "iris", board = "azure", description = "My mtcars")
+#> No encoding supplied: defaulting to UTF-8.
+```
+
+And you can also find and get resources from the Azure board.
+
+``` r
+pin_find("mtcars", board = "azure")
+#> # A tibble: 2 x 4
+#>   name   description                   type  board
+#>   <chr>  <chr>                         <chr> <chr>
+#> 1 iris   My mtcars                     table azure
+#> 2 mtcars The motor trend cars data set table azure
+
+pin_get("mtcars", board = "azure")
 #> # A tibble: 32 x 11
 #>      mpg   cyl  disp    hp  drat    wt  qsec    vs    am  gear  carb
 #>    <dbl> <dbl> <dbl> <dbl> <dbl> <dbl> <dbl> <dbl> <dbl> <dbl> <dbl>
