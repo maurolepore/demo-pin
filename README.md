@@ -71,12 +71,12 @@ raw_url <-
 # First time
 system.time(read_csv(raw_url))
 #>    user  system elapsed 
-#>   0.116   0.032   0.287
+#>   0.079   0.025   0.174
 
 # Second time
 system.time(read_csv(raw_url))
 #>    user  system elapsed 
-#>   0.020   0.003   0.152
+#>   0.021   0.000   0.120
 ```
 
 A better way is to `pin()` the URL.
@@ -85,12 +85,12 @@ A better way is to `pin()` the URL.
 # First time
 system.time(read_csv(pin(raw_url)))
 #>    user  system elapsed 
-#>   0.038   0.004   0.099
+#>   0.026   0.004   0.089
 
 # Second time
 system.time(read_csv(pin(raw_url)))
 #>    user  system elapsed 
-#>   0.006   0.004   0.010
+#>   0.005   0.004   0.009
 ```
 
 The first time pins creates a cache in a local “board” and reuses it the
@@ -100,9 +100,7 @@ second time – which runs faster.
 pins::board_default()
 #> [1] "local"
 
-fs::dir_tree(
-  pins::board_cache_path()
-)
+fs::dir_tree(pins::board_cache_path())
 #> /home/mauro/.cache/pins
 #> └── local
 #>     ├── data.txt
@@ -111,9 +109,7 @@ fs::dir_tree(
 #>     │   ├── data.txt
 #>     │   └── mtcars.csv
 #>     └── my_data
-#>         ├── data.csv
-#>         ├── data.rds
-#>         └── data.txt
+#>         └── mtcars.csv
 ```
 
 The default location for the local-board cache is convenient and
@@ -126,21 +122,45 @@ board_register_local(
   cache = my_cache, 
   versions = TRUE
 )
-fs::dir_tree(my_cache)
-#> /tmp/Rtmp1qb3b4/pins_cache
 ```
 
 `versions = TRUE` enables [pins
 versions](https://pins.rstudio.com/articles/advanced-versions.html).
 
+You can pin a dataset at different after you read it, and get it from
+your cache into any R session.
+
 ``` r
-read_csv(pin(raw_url)) %>% 
+read_csv(raw_url) %>% 
   pin(name = "my_data", board = "my_local_board")
 
-pin_get("my_data", board = "my_local_board") %>% 
+# Sometime, somewhere
+my_data <- pin_get(name = "my_data", board = "my_local_board")
+my_data
+#> # A tibble: 32 x 11
+#>      mpg   cyl  disp    hp  drat    wt  qsec    vs    am  gear  carb
+#>    <dbl> <dbl> <dbl> <dbl> <dbl> <dbl> <dbl> <dbl> <dbl> <dbl> <dbl>
+#>  1  21       6  160    110  3.9   2.62  16.5     0     1     4     4
+#>  2  21       6  160    110  3.9   2.88  17.0     0     1     4     4
+#>  3  22.8     4  108     93  3.85  2.32  18.6     1     1     4     1
+#>  4  21.4     6  258    110  3.08  3.22  19.4     1     0     3     1
+#>  5  18.7     8  360    175  3.15  3.44  17.0     0     0     3     2
+#>  6  18.1     6  225    105  2.76  3.46  20.2     1     0     3     1
+#>  7  14.3     8  360    245  3.21  3.57  15.8     0     0     3     4
+#>  8  24.4     4  147.    62  3.69  3.19  20       1     0     4     2
+#>  9  22.8     4  141.    95  3.92  3.15  22.9     1     0     4     2
+#> 10  19.2     6  168.   123  3.92  3.44  18.3     1     0     4     4
+#> # … with 22 more rows
+```
+
+And you can pin different versions, which might be difficult or slow to
+re-compute.
+
+``` r
+my_data %>% 
   filter(cyl > 6) %>% 
-  pin(name = "my_data", board = "my_local_board") %>%  
   # Cache new version
+  pin(name = "my_data", board = "my_local_board") %>%  
   select(mpg, gear) %>% 
   # Cache new version
   pin(name = "my_data", board = "my_local_board") 
@@ -167,7 +187,7 @@ In case you are curious, this is the structure of pins versions.
 
 ``` r
 fs::dir_tree(my_cache)
-#> /tmp/Rtmp1qb3b4/pins_cache
+#> /tmp/RtmpKNyRQV/pins_cache
 #> └── my_local_board
 #>     ├── data.txt
 #>     ├── data.txt.lock

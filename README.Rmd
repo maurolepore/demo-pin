@@ -80,9 +80,7 @@ The first time pins creates a cache in a local "board" and reuses it the second 
 ```{r}
 pins::board_default()
 
-fs::dir_tree(
-  pins::board_cache_path()
-)
+fs::dir_tree(pins::board_cache_path())
 ```
 
 The default location for the local-board cache is convenient and sensible, but you may want to instead use another location.
@@ -94,19 +92,28 @@ board_register_local(
   cache = my_cache, 
   versions = TRUE
 )
-fs::dir_tree(my_cache)
 ```
 
 `versions = TRUE` enables [pins versions](https://pins.rstudio.com/articles/advanced-versions.html).
 
+You can pin a dataset at different after you read it, and get it from your cache into any R session.
+
 ```{r, message=FALSE}
-read_csv(pin(raw_url)) %>% 
+read_csv(raw_url) %>% 
   pin(name = "my_data", board = "my_local_board")
 
-pin_get("my_data", board = "my_local_board") %>% 
+# Sometime, somewhere
+my_data <- pin_get(name = "my_data", board = "my_local_board")
+my_data
+```
+
+And you can pin different versions, which might be difficult or slow to re-compute.
+
+```{r, message=FALSE}
+my_data %>% 
   filter(cyl > 6) %>% 
-  pin(name = "my_data", board = "my_local_board") %>%  
   # Cache new version
+  pin(name = "my_data", board = "my_local_board") %>%  
   select(mpg, gear) %>% 
   # Cache new version
   pin(name = "my_data", board = "my_local_board") 
