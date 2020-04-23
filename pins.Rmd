@@ -94,7 +94,6 @@ fs::dir_tree(my_cache)
 git init /tmp/Rtmpdrvnwb/pins_cache
 git add . 
 git commit -m "Initialize my local cache"
-git log --oneline
 ```
 
 ```{r, message=FALSE}
