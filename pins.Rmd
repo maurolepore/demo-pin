@@ -90,9 +90,17 @@ fs::dir_tree(my_cache)
 ```
 
 ```{r, engine=bash}
-git init my_cache
+# On the terminal
+git init /tmp/Rtmpdrvnwb/pins_cache
+git add . 
+git commit -m "Initialize my local cache"
+git log --oneline
 ```
 
+```{r, message=FALSE}
+my_data <- read_csv(pin(raw_url, board = "my_local_board"))
+fs::dir_tree(my_cache)
+```
 
 
 
