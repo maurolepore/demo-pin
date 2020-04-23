@@ -11,7 +11,7 @@ Here I evaluate if and how pins meets these requirements:
 - [ ] Supports version control with Git and GitHub.
 - [ ] Can handle datasets of the maximum size we need.
 
-### tl;dr
+tl;dr:
 
 * The pins package meets all requirements with some caveats.
 * `pin()`: Pin remote resources locally, work offline and cache results.
@@ -86,22 +86,42 @@ fs::dir_tree(
 )
 ```
 
-The default location for the local-board cache is convenient and sensible, but you may want to instead use a location you track with Git.
+The default location for the local-board cache is convenient and sensible, but you may want to instead use another location.
 
 ```{r}
 my_cache <- fs::path(tempdir(), "pins_cache")
-board_register_local("my_local_board", cache = my_cache)
+board_register_local(
+  name = "my_local_board", 
+  cache = my_cache, 
+  versions = TRUE
+)
 fs::dir_tree(my_cache)
 ```
+
+`versions = TRUE` enables [pins versions](https://pins.rstudio.com/articles/advanced-versions.html).
+
+```{r}
+my_data %>% 
+  filter(cyl > 6) %>% 
+  pin(name = "my_data", board = "my_local_board") %>%  
+  # Cache new version
+  select(mpg, gear) %>% 
+  # Cache new version
+  pin(name = "my_data", board = "my_local_board") 
+
+pins::pin_versions("my_data", board = "my_local_board")
+```
+
+```{r}
+fs::dir_tree(my_cache)
+```
+
+### Supports version control with Git
+
+For more control, initialize a Git repository in your pins cache.
 
 ```{r, engine=bash}
-# On the terminal
 git init /tmp/Rtmpdrvnwb/pins_cache
-```
-
-```{r, message=FALSE}
-my_data <- read_csv(pin(raw_url, name = "my_data", board = "my_local_board"))
-fs::dir_tree(my_cache)
 ```
 
 On the terminal I can now change directory to my pins_cache, add all changes, commit, and inspect the log:
@@ -116,7 +136,11 @@ git log
 
 ### Allows us to control permissions to read and write data
 
-It is not pins job to control who reads or writes data but it plays well with tools like GitHub that provide granular [access permissions](https://help.github.com/en/github/getting-started-with-github/access-permissions-on-github).
+It is not pins job to control who reads or writes data but it plays well with tools like Azure and GitHub that provide granular [access permissions](https://help.github.com/en/github/getting-started-with-github/access-permissions-on-github).
+
+### Can handle datasets of the maximum size we need
+
+Pins has no limit but some boards do. [Azure](https://pins.rstudio.com/articles/boards-azure.html) is apparently limitless but charges for what it hosts. On [GitHub](https://pins.rstudio.com/articles/boards-github.html) pins can host files up to 2GB in both public and private repos.
 
 
 
@@ -126,112 +150,4 @@ Cleanup
 trash /tmp/Rtmpdrvnwb/pins_cache
 ```
 
-- [x] Can handle datasets of the maximum size we need.
-- [x] Supports version control with Git and GitHub.
 
-
-# Pin a data frame or other R object: Save computation time ---------------
-
-# Compute a thing
-colMeans(datasets::airquality, na.rm = TRUE) %>% 
-  pin(name = "expensive_result")
-
-# Use a thing elsewhere
-pins::pin_get("expensive_result")
-
-# Works after you restart R
-callr::r(function()  # This is to run in a separate R session
-  pins::pin_get("expensive_result")
-)
-
-# Your thing is now stored in pins's cache
-fs::dir_tree(pins::board_cache_path())
-
-# Pin resources from GitHub -----------------------------------------------
-
-# You can store and pin datasets on public and private GitHub repos
-
-# 1. Create an empty GitHub repo 
-# I did it from the terminal with:
-#   gh repo create maurolepore/demo-pin1
-#   gh repo create maurolepore/demo-pin2 --public
-browseURL("https://github.com/maurolepore/demo-pin1")
-browseURL("https://github.com/maurolepore/demo-pin2")
-
-# 2. Register "github" and the specific "owner/repo"
-pins::board_list()
-pins::board_register("github", repo = "maurolepore/demo-pin1")
-pins::board_register("github", repo = "maurolepore/demo-pin2")
-pins::board_list()
-
-datasets::BOD %>% 
-  pins::pin(
-    name = "my_bod", 
-    description = "My copy of `datasets::BOD`",
-    board = "github", 
-    repo = "maurolepore/demo-pin1"
-)
-
-datasets::iris %>% 
-  pins::pin(
-    name = "my_iris", 
-    description = "My copy of `datasets::iris`.",
-    board = "github", 
-    repo = "maurolepore/demo-pin2"
-  )
-
-pins::pin_find("datasets", board = "github")
-
-# If the resource is gone, you can still get it from your cache
-fs::dir_tree(pins::board_cache_path())
-
-my_bod <- read_rds(
-  fs::path_home(".cache", "pins", "github", "my_bod", "data.rds")
-)
-
-try(pins::pin_get("my_bod", board = "github"))
-
-# Versioning --------------------------------------------------------------
-
-# new version
-my_bod %>%
-  head(3) %>%
-  pin(name = "my_bod", board = "github", repo = "maurolepore/demo-pin2")  
-
-history <- pins::pin_versions(
-    name = "my_bod", board = "github", repo = "maurolepore/demo-pin2"
-  )
-history
-
-fs::dir_tree(pins::board_cache_path())
-
-pins::pin_get("my_bod", version = history$version[1])
-pins::pin_get("my_bod", version = history$version[2])
-
-# Works with other boards, e.g. Azure -------------------------------------
-
-browseURL("https://pins.rstudio.com/articles/boards-azure.html")
-
-# Cleanup -----------------------------------------------------------------
-
-fs::dir_tree(pins::board_cache_path())
-
-pins::pin_remove("expensive_result", board = "local")
-pins::pin_remove("mtcars", board = "local")
-
-fs::dir_tree(pins::board_cache_path())
-
-# You can remove pins from GitHub, but they stay in locall cache
-my_bod %>% 
-  pins::pin(name = "my_iris", board = "github", 
-    repo = "maurolepore/demo-pin2"
-    )
-pins::pin_remove(name = "my_bod", board = "github", 
-                 repo = "maurolepore/demo-pin2")
-browseURL("https://github.com/maurolepore/demo-pin1")
-browseURL("https://github.com/maurolepore/demo-pin2")
-fs::dir_tree(pins::board_cache_path())
-
-pins::board_list()
-pins::board_deregister("github")
-pins::board_list()
