@@ -37,6 +37,11 @@ library(dplyr)
 library(fs)
 ```
 
+```{r}
+# Where am I?
+demo <- here::here()
+```
+
 ### Is low cost or better free
 
 As any other R package, pins is free, but [can be used with paid services, e.g. Azure](https://pins.rstudio.com/articles/boards-azure.html).
@@ -92,8 +97,6 @@ fs::dir_tree(my_cache)
 ```{r, engine=bash}
 # On the terminal
 git init /tmp/Rtmpdrvnwb/pins_cache
-git add . 
-git commit -m "Initialize my local cache"
 ```
 
 ```{r, message=FALSE}
@@ -101,41 +104,28 @@ my_data <- read_csv(pin(raw_url, name = "my_data", board = "my_local_board"))
 fs::dir_tree(my_cache)
 ```
 
+On the terminal I can now change directory to my pins_cache, add all changes, commit, and inspect the log:
+
+```{r, engine=bash}
+cd /tmp/Rtmpdrvnwb/pins_cache
+git add .
+git commit -m "Start tracking my cache with Git"
+
+git log
+```
+
+### Allows us to control permissions to read and write data
+
+It is not pins job to control who reads or writes data but it plays well with tools like GitHub that provide granular [access permissions](https://help.github.com/en/github/getting-started-with-github/access-permissions-on-github).
+
+
+
 Cleanup
 
 ```{r, engine=bash}
 trash /tmp/Rtmpdrvnwb/pins_cache
 ```
 
-
-
-
-
-```{r}
-
-read_csv(pin(raw_url, cache = path))
-
-```
-
-
-
-```{r}
-
-
-# Or you can pin the url and store the data in a local cache
-# * The second call should be faster
-system.time(read_csv(pin(raw_url)))
-system.time(read_csv(pin(raw_url)))
-
-# Cache structure
-fs::dir_tree(pins::board_cache_path())
-
-
-```
-
-
-
-- [x] Allows us to control permissions to read and write data.
 - [x] Can handle datasets of the maximum size we need.
 - [x] Supports version control with Git and GitHub.
 
