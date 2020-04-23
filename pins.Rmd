@@ -102,6 +102,12 @@ my_data <- read_csv(pin(raw_url, board = "my_local_board"))
 fs::dir_tree(my_cache)
 ```
 
+```{r, engine=bash}
+trash /tmp/Rtmpdrvnwb/pins_cache
+```
+
+
+
 
 
 ```{r}
