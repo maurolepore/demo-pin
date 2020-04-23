@@ -173,7 +173,7 @@ In case you are curious, this is the structure of pins versions.
 
 ``` r
 dir_tree(my_cache)
-#> /tmp/RtmpGCSPzf/pins_cache
+#> /tmp/Rtmp2e1HFX/pins_cache
 #> └── my_local_board
 #>     ├── data.txt
 #>     ├── data.txt.lock
@@ -200,7 +200,7 @@ For more control, initialize a Git repository in your pins cache.
 # Set environmental variable so I can use it from the terminal
 Sys.setenv(MY_CACHE = my_cache)
 Sys.getenv("MY_CACHE")
-#> [1] "/tmp/RtmpGCSPzf/pins_cache"
+#> [1] "/tmp/Rtmp2e1HFX/pins_cache"
 ```
 
 From the terminal:
@@ -210,6 +210,98 @@ git init $MY_CACHE
 cd $MY_CACHE
 git add .
 git commit -m "Start tracking my cache with Git"
+```
+
+As usual, you may now push your Git repository to GitHub.
+
+But GitHub repos can better serve you as a pins board. This works both
+for public and private repos.
+
+For example:
+
+``` r
+board_register_github(
+  name = "my_github_board",
+  repo = "maurolepore/demo-board",
+  cache = my_cache,
+  versions = TRUE
+)
+
+my_data %>% 
+  pin(
+    name = "my_data",
+    board = "my_github_board",
+    description = "Some data",
+    repo = "maurolepore/demo-board"
+  )
+
+pin_find("my_data", board = "my_github_board")
+#> # A tibble: 1 x 4
+#>   name    description type  board          
+#>   <chr>   <chr>       <chr> <chr>          
+#> 1 my_data Some data   table my_github_board
+
+pin_get("my_data", board = "my_github_board")
+#> # A tibble: 32 x 11
+#>      mpg   cyl  disp    hp  drat    wt  qsec    vs    am  gear  carb
+#>    <dbl> <dbl> <dbl> <dbl> <dbl> <dbl> <dbl> <dbl> <dbl> <dbl> <dbl>
+#>  1  21       6  160    110  3.9   2.62  16.5     0     1     4     4
+#>  2  21       6  160    110  3.9   2.88  17.0     0     1     4     4
+#>  3  22.8     4  108     93  3.85  2.32  18.6     1     1     4     1
+#>  4  21.4     6  258    110  3.08  3.22  19.4     1     0     3     1
+#>  5  18.7     8  360    175  3.15  3.44  17.0     0     0     3     2
+#>  6  18.1     6  225    105  2.76  3.46  20.2     1     0     3     1
+#>  7  14.3     8  360    245  3.21  3.57  15.8     0     0     3     4
+#>  8  24.4     4  147.    62  3.69  3.19  20       1     0     4     2
+#>  9  22.8     4  141.    95  3.92  3.15  22.9     1     0     4     2
+#> 10  19.2     6  168.   123  3.92  3.44  18.3     1     0     4     4
+#> # … with 22 more rows
+```
+
+Worst case scenario you can always get data directly from your local
+cache.
+
+``` r
+dir_tree(my_cache)
+#> /tmp/Rtmp2e1HFX/pins_cache
+#> ├── my_github_board
+#> │   ├── data.txt
+#> │   ├── data.txt.lock
+#> │   └── my_data
+#> │       ├── data.rds
+#> │       └── data.txt
+#> └── my_local_board
+#>     ├── data.txt
+#>     ├── data.txt.lock
+#>     └── my_data
+#>         ├── _versions
+#>         │   ├── 53d5e443f9427929c8d518a9dcbc235c931dbc79
+#>         │   │   ├── data.csv
+#>         │   │   ├── data.rds
+#>         │   │   └── data.txt
+#>         │   └── c4ebac4df0413fad973f3c39a04390801946b259
+#>         │       ├── data.csv
+#>         │       ├── data.rds
+#>         │       └── data.txt
+#>         ├── data.csv
+#>         ├── data.rds
+#>         └── data.txt
+
+path(my_cache, "my_github_board", "my_data", "data.rds") %>% read_rds()
+#> # A tibble: 32 x 11
+#>      mpg   cyl  disp    hp  drat    wt  qsec    vs    am  gear  carb
+#>    <dbl> <dbl> <dbl> <dbl> <dbl> <dbl> <dbl> <dbl> <dbl> <dbl> <dbl>
+#>  1  21       6  160    110  3.9   2.62  16.5     0     1     4     4
+#>  2  21       6  160    110  3.9   2.88  17.0     0     1     4     4
+#>  3  22.8     4  108     93  3.85  2.32  18.6     1     1     4     1
+#>  4  21.4     6  258    110  3.08  3.22  19.4     1     0     3     1
+#>  5  18.7     8  360    175  3.15  3.44  17.0     0     0     3     2
+#>  6  18.1     6  225    105  2.76  3.46  20.2     1     0     3     1
+#>  7  14.3     8  360    245  3.21  3.57  15.8     0     0     3     4
+#>  8  24.4     4  147.    62  3.69  3.19  20       1     0     4     2
+#>  9  22.8     4  141.    95  3.92  3.15  22.9     1     0     4     2
+#> 10  19.2     6  168.   123  3.92  3.44  18.3     1     0     4     4
+#> # … with 22 more rows
 ```
 
 ### Allows us to control permissions to read and write data
@@ -231,5 +323,5 @@ host files up to 2GB in both public and private repos.
 Cleanup.
 
 ``` /bin/bash
-trash /tmp/Rtmpdrvnwb/pins_cache
+trash $MY_CACHE
 ```

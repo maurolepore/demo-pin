@@ -125,11 +125,49 @@ Sys.getenv("MY_CACHE")
 
 From the terminal:
 
-```{r, engine="/bin/bash"}
+```{r git, echo=TRUE, engine='/bin/bash'}
 git init $MY_CACHE
 cd $MY_CACHE
 git add .
 git commit -m "Start tracking my cache with Git"
+```
+
+As usual, you may now push your Git repository to GitHub.
+
+But GitHub repos can better serve you as a pins board. This works both for public and private repos.
+
+```{r engine="/bin/bash", include=FALSE}
+gh repo create maurolepore/demo-board --public
+```
+For example:
+
+```{r}
+board_register_github(
+  name = "my_github_board",
+  repo = "maurolepore/demo-board",
+  cache = my_cache,
+  versions = TRUE
+)
+
+my_data %>% 
+  pin(
+    name = "my_data",
+    board = "my_github_board",
+    description = "Some data",
+    repo = "maurolepore/demo-board"
+  )
+
+pin_find("my_data", board = "my_github_board")
+
+pin_get("my_data", board = "my_github_board")
+```
+
+Worst case scenario you can always get data directly from your local cache.
+
+```{r}
+dir_tree(my_cache)
+
+path(my_cache, "my_github_board", "my_data", "data.rds") %>% read_rds()
 ```
 
 ### Allows us to control permissions to read and write data
@@ -145,7 +183,5 @@ Pins has no limit but some boards do. [Azure](https://pins.rstudio.com/articles/
 Cleanup.
 
 ```{r, engine="/bin/bash"}
-trash /tmp/Rtmpdrvnwb/pins_cache
+trash $MY_CACHE
 ```
-
-
