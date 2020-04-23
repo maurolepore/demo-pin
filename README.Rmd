@@ -1,15 +1,19 @@
+---
+output: github_document
+---
+
 # Managing data better with pins
 
 Relates to our [discussion on managing and using data](https://github.com/2DegreesInvesting/ds-incubator/issues/35), and extends a previous [introduction to the pins package](https://github.com/2DegreesInvesting/ds-incubator/issues/38).
 
-Here I evaluate if and how pins meets these requirements:
+Here I show how pins meets these requirements:
 
-- [ ] Plays well with R.
-- [ ] Is low cost or better free.
-- [ ] Data hosted online can also be accessed from a local cache.
-- [ ] Allows us to control permissions to read and write data.
-- [ ] Supports version control with Git and GitHub.
-- [ ] Can handle datasets of the maximum size we need.
+- [x] Plays well with R.
+- [x] Is low cost or better free.
+- [x] Data hosted online can also be accessed from a local cache.
+- [x] Allows us to control permissions to read and write data.
+- [x] Supports version control with Git and GitHub.
+- [x] Can handle datasets of the maximum size we need.
 
 tl;dr:
 
@@ -95,7 +99,7 @@ fs::dir_tree(my_cache)
 
 `versions = TRUE` enables [pins versions](https://pins.rstudio.com/articles/advanced-versions.html).
 
-```{r}
+```{r, message=FALSE}
 read_csv(pin(raw_url)) %>% 
   pin(name = "my_data", board = "my_local_board")
 
@@ -133,12 +137,10 @@ git init /tmp/Rtmpdrvnwb/pins_cache
 
 On the terminal I can now change directory to my pins_cache, add all changes, commit, and inspect the log:
 
-```{r, engine="/bin/bash"}
+```{r echo=TRUE, engine="/bin/bash"}
 cd /tmp/Rtmpdrvnwb/pins_cache
 git add .
 git commit -m "Start tracking my cache with Git"
-
-git log
 ```
 
 ### Allows us to control permissions to read and write data
