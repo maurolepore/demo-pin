@@ -1,0 +1,232 @@
+# Managing data better with pins
+
+Relates to our [discussion on managing and using data](https://github.com/2DegreesInvesting/ds-incubator/issues/35), and extends a previous [introduction to the pins package](https://github.com/2DegreesInvesting/ds-incubator/issues/38).
+
+Here I evaluate if and how pins meets these requirements:
+
+- [ ] Plays well with R.
+- [ ] Is low cost or better free.
+- [ ] Data hosted online can also be accessed from a local cache.
+- [ ] Allows us to control permissions to read and write data.
+- [ ] Supports version control with Git and GitHub.
+- [ ] Can handle datasets of the maximum size we need.
+
+### tl;dr
+
+* The pins package meets all requirements with some caveats.
+* `pin()`: Pin remote resources locally, work offline and cache results.
+* `pin_find()`: Discover new resources across different boards.
+* `board_register()`: Share resources in local folders, GitHub, Azure, and more.
+* Learn more at <https://pins.rstudio.com/>.
+
+### Plays well with R
+
+It is an [R package](https://cloud.r-project.org/web/packages/pins/index.html), and well integrated with RStudio.
+
+```{r}
+# install.packages("pins")
+library(pins)
+```
+
+Here I also use a few other packages for convenience.
+
+```{r}
+library(glue)
+library(readr)
+library(dplyr)
+library(fs)
+```
+
+### Is low cost or better free
+
+As any other R package, pins is free, but [can be used with paid services, e.g. Azure](https://pins.rstudio.com/articles/boards-azure.html).
+
+### Data hosted online can also be accessed from a local cache
+
+Consider a dataset stored online:
+
+* [Nice view](https://github.com/tidyverse/readr/blob/master/inst/extdata/mtcars.csv).
+* [Raw view](https://raw.githubusercontent.com/tidyverse/readr/master/inst/extdata/mtcars.csv)
+
+You don't need pins to download or read this file. You may do it with `download.file()` and `read.csv()` (I prefer `readr::read_csv()`). But every time the process may potentially take a long time.
+
+```{r, message=FALSE}
+raw_url <- 
+  "https://raw.githubusercontent.com/tidyverse/readr/master/inst/extdata/mtcars.csv"
+
+# First time
+system.time(read_csv(raw_url))
+
+# Second time
+system.time(read_csv(raw_url))
+```
+
+A better way is to `pin()` the URL.
+
+```{r, message=FALSE}
+# First time
+system.time(read_csv(pin(raw_url)))
+
+# Second time
+system.time(read_csv(pin(raw_url)))
+```
+
+The first time pins creates a cache in a local "board" and reuses it the second time -- which runs faster.
+
+```{r}
+pins::board_default()
+
+fs::dir_tree(
+  pins::board_cache_path()
+)
+```
+
+The default location for the local-board cache is convenient and sensible, but you may want to instead use a location you track with Git.
+
+```{r}
+my_cache <- fs::path(tempdir(), "pins_cache")
+board_register_local("my_local_board", cache = my_cache)
+fs::dir_tree(my_cache)
+```
+
+```{r, engine=bash}
+git init my_cache
+```
+
+
+
+
+```{r}
+
+read_csv(pin(raw_url, cache = path))
+
+```
+
+
+
+```{r}
+
+
+# Or you can pin the url and store the data in a local cache
+# * The second call should be faster
+system.time(read_csv(pin(raw_url)))
+system.time(read_csv(pin(raw_url)))
+
+# Cache structure
+fs::dir_tree(pins::board_cache_path())
+
+
+```
+
+
+
+- [x] Allows us to control permissions to read and write data.
+- [x] Can handle datasets of the maximum size we need.
+- [x] Supports version control with Git and GitHub.
+
+
+# Pin a data frame or other R object: Save computation time ---------------
+
+# Compute a thing
+colMeans(datasets::airquality, na.rm = TRUE) %>% 
+  pin(name = "expensive_result")
+
+# Use a thing elsewhere
+pins::pin_get("expensive_result")
+
+# Works after you restart R
+callr::r(function()  # This is to run in a separate R session
+  pins::pin_get("expensive_result")
+)
+
+# Your thing is now stored in pins's cache
+fs::dir_tree(pins::board_cache_path())
+
+# Pin resources from GitHub -----------------------------------------------
+
+# You can store and pin datasets on public and private GitHub repos
+
+# 1. Create an empty GitHub repo 
+# I did it from the terminal with:
+#   gh repo create maurolepore/demo-pin1
+#   gh repo create maurolepore/demo-pin2 --public
+browseURL("https://github.com/maurolepore/demo-pin1")
+browseURL("https://github.com/maurolepore/demo-pin2")
+
+# 2. Register "github" and the specific "owner/repo"
+pins::board_list()
+pins::board_register("github", repo = "maurolepore/demo-pin1")
+pins::board_register("github", repo = "maurolepore/demo-pin2")
+pins::board_list()
+
+datasets::BOD %>% 
+  pins::pin(
+    name = "my_bod", 
+    description = "My copy of `datasets::BOD`",
+    board = "github", 
+    repo = "maurolepore/demo-pin1"
+)
+
+datasets::iris %>% 
+  pins::pin(
+    name = "my_iris", 
+    description = "My copy of `datasets::iris`.",
+    board = "github", 
+    repo = "maurolepore/demo-pin2"
+  )
+
+pins::pin_find("datasets", board = "github")
+
+# If the resource is gone, you can still get it from your cache
+fs::dir_tree(pins::board_cache_path())
+
+my_bod <- read_rds(
+  fs::path_home(".cache", "pins", "github", "my_bod", "data.rds")
+)
+
+try(pins::pin_get("my_bod", board = "github"))
+
+# Versioning --------------------------------------------------------------
+
+# new version
+my_bod %>%
+  head(3) %>%
+  pin(name = "my_bod", board = "github", repo = "maurolepore/demo-pin2")  
+
+history <- pins::pin_versions(
+    name = "my_bod", board = "github", repo = "maurolepore/demo-pin2"
+  )
+history
+
+fs::dir_tree(pins::board_cache_path())
+
+pins::pin_get("my_bod", version = history$version[1])
+pins::pin_get("my_bod", version = history$version[2])
+
+# Works with other boards, e.g. Azure -------------------------------------
+
+browseURL("https://pins.rstudio.com/articles/boards-azure.html")
+
+# Cleanup -----------------------------------------------------------------
+
+fs::dir_tree(pins::board_cache_path())
+
+pins::pin_remove("expensive_result", board = "local")
+pins::pin_remove("mtcars", board = "local")
+
+fs::dir_tree(pins::board_cache_path())
+
+# You can remove pins from GitHub, but they stay in locall cache
+my_bod %>% 
+  pins::pin(name = "my_iris", board = "github", 
+    repo = "maurolepore/demo-pin2"
+    )
+pins::pin_remove(name = "my_bod", board = "github", 
+                 repo = "maurolepore/demo-pin2")
+browseURL("https://github.com/maurolepore/demo-pin1")
+browseURL("https://github.com/maurolepore/demo-pin2")
+fs::dir_tree(pins::board_cache_path())
+
+pins::board_list()
+pins::board_deregister("github")
+pins::board_list()
