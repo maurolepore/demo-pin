@@ -200,17 +200,29 @@ board_register_azure()
 You can now pin resources to the Azure board.
 
 ```{r}
+datasets::iris %>% 
+  pin(name = "iris", board = "azure", description = "My iris data")
+
 datasets::mtcars %>% 
-  pin(name = "iris", board = "azure", description = "My mtcars")
+  pin(name = "mtcars", board = "azure", description = "My mtcars data")
 ```
 
 And you can also find and get resources from the Azure board.
 
 ```{r}
-pin_find("mtcars", board = "azure")
+pin_find("data", board = "azure")
 
 pin_get("mtcars", board = "azure")
 ```
+
+And you can also remove resources.
+
+```{r}
+pin_remove(name = "mtcars", board = "azure")
+
+pin_find("data", board = "azure")
+```
+
 
 ### Allows us to control permissions to read and write data
 
