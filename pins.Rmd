@@ -108,6 +108,7 @@ fs::dir_tree(
 
 ```{r, engine=bash}
 trash /tmp/Rtmpdrvnwb/pins_cache
+trash /home/mauro/.cache/pins/my_local_board
 ```
 
 
