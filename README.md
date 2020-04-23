@@ -65,77 +65,32 @@ You don’t need pins to download or read this file. You may do it with
 every time the process may potentially take a long time.
 
 ``` r
-raw_url <- 
-  "https://raw.githubusercontent.com/tidyverse/readr/master/inst/extdata/mtcars.csv"
-
-# First time
-system.time(read_csv(raw_url))
-#>    user  system elapsed 
-#>   0.083   0.013   0.163
-
-# Second time
-system.time(read_csv(raw_url))
-#>    user  system elapsed 
-#>   0.019   0.000   0.096
+url <- "https://raw.githubusercontent.com/tidyverse/readr/master/inst/extdata/mtcars.csv"
+url %>% read_csv()
+#> # A tibble: 32 x 11
+#>      mpg   cyl  disp    hp  drat    wt  qsec    vs    am  gear  carb
+#>    <dbl> <dbl> <dbl> <dbl> <dbl> <dbl> <dbl> <dbl> <dbl> <dbl> <dbl>
+#>  1  21       6  160    110  3.9   2.62  16.5     0     1     4     4
+#>  2  21       6  160    110  3.9   2.88  17.0     0     1     4     4
+#>  3  22.8     4  108     93  3.85  2.32  18.6     1     1     4     1
+#>  4  21.4     6  258    110  3.08  3.22  19.4     1     0     3     1
+#>  5  18.7     8  360    175  3.15  3.44  17.0     0     0     3     2
+#>  6  18.1     6  225    105  2.76  3.46  20.2     1     0     3     1
+#>  7  14.3     8  360    245  3.21  3.57  15.8     0     0     3     4
+#>  8  24.4     4  147.    62  3.69  3.19  20       1     0     4     2
+#>  9  22.8     4  141.    95  3.92  3.15  22.9     1     0     4     2
+#> 10  19.2     6  168.   123  3.92  3.44  18.3     1     0     4     4
+#> # … with 22 more rows
 ```
 
-A better way is to `pin()` the URL.
+A better way is to `pin()` the URL, which creates a cache in a local
+“board” that you can later use.
 
 ``` r
-# First time
-system.time(read_csv(pin(raw_url)))
-#>    user  system elapsed 
-#>   0.028   0.004   0.088
+url %>% pin("my_data")
 
-# Second time
-system.time(read_csv(pin(raw_url)))
-#>    user  system elapsed 
-#>   0.009   0.000   0.008
-```
-
-The first time pins creates a cache in a local “board” and reuses it the
-second time – which runs faster.
-
-``` r
-board_default()
-#> [1] "local"
-
-dir_tree(board_cache_path())
-#> /home/mauro/.cache/pins
-#> └── local
-#>     ├── data.txt
-#>     ├── data.txt.lock
-#>     ├── mtcars
-#>     │   ├── data.txt
-#>     │   └── mtcars.csv
-#>     └── my_data
-#>         └── mtcars.csv
-```
-
-The default location for the local-board cache is convenient and
-sensible, but you may want to instead use another location.
-
-``` r
-my_cache <- path(tempdir(), "pins_cache")
-board_register_local(
-  name = "my_local_board", 
-  cache = my_cache, 
-  versions = TRUE
-)
-```
-
-`versions = TRUE` enables [pins
-versions](https://pins.rstudio.com/articles/advanced-versions.html).
-
-You can pin a dataset at different after you read it, and get it from
-your cache into any R session.
-
-``` r
-read_csv(raw_url) %>% 
-  pin(name = "my_data", board = "my_local_board")
-
-# Sometime, somewhere
-my_data <- pin_get(name = "my_data", board = "my_local_board")
+# Works from any R session
+my_data <- pin_get("my_data") %>% read_csv()
 my_data
 #> # A tibble: 32 x 11
 #>      mpg   cyl  disp    hp  drat    wt  qsec    vs    am  gear  carb
@@ -153,10 +108,42 @@ my_data
 #> # … with 22 more rows
 ```
 
-And you can pin different versions, which might be difficult or slow to
-re-compute.
+> `pin()` still works when working offline or when the remote resource
+> becomes unavailable; when this happens, a warning will be triggered
+> but your code will continue to work.
+
+The default location for the local-board cache is convenient and
+sensible.
 
 ``` r
+board_default()
+#> [1] "local"
+
+dir_tree(board_cache_path())
+#> /home/mauro/.cache/pins
+#> └── local
+#>     ├── data.txt
+#>     ├── data.txt.lock
+#>     ├── mtcars
+#>     │   ├── data.txt
+#>     │   └── mtcars.csv
+#>     └── my_data
+#>         ├── data.txt
+#>         └── mtcars.csv
+```
+
+But you may want to instead use another location, and enable [pins
+versions](https://pins.rstudio.com/articles/advanced-versions.html).
+
+``` r
+my_cache <- path(tempdir(), "pins_cache")
+
+board_register_local(
+  name = "my_local_board", 
+  cache = my_cache, 
+  versions = TRUE
+)
+
 my_data %>% 
   filter(cyl > 6) %>% 
   # Cache new version
@@ -167,12 +154,11 @@ my_data %>%
 
 history <- pin_versions("my_data", board = "my_local_board")
 history
-#> # A tibble: 3 x 1
+#> # A tibble: 2 x 1
 #>   version
 #>   <chr>  
 #> 1 c4ebac4
-#> 2 473809d
-#> 3 87c8327
+#> 2 53d5e44
 
 latest <- history$version[1]
 dim(pin_get("my_data", board = "my_local_board", version = latest))
@@ -187,17 +173,13 @@ In case you are curious, this is the structure of pins versions.
 
 ``` r
 dir_tree(my_cache)
-#> /tmp/RtmpxtEBJ5/pins_cache
+#> /tmp/RtmpGCSPzf/pins_cache
 #> └── my_local_board
 #>     ├── data.txt
 #>     ├── data.txt.lock
 #>     └── my_data
 #>         ├── _versions
-#>         │   ├── 473809d4678e82db4ecc9a2a6b72f04f69d35d83
-#>         │   │   ├── data.csv
-#>         │   │   ├── data.rds
-#>         │   │   └── data.txt
-#>         │   ├── 87c8327fdadbef640066aded629edda046483bc9
+#>         │   ├── 53d5e443f9427929c8d518a9dcbc235c931dbc79
 #>         │   │   ├── data.csv
 #>         │   │   ├── data.rds
 #>         │   │   └── data.txt
@@ -214,15 +196,18 @@ dir_tree(my_cache)
 
 For more control, initialize a Git repository in your pins cache.
 
-``` /bin/bash
-git init /tmp/Rtmpdrvnwb/pins_cache
+``` r
+# Set environmental variable so I can use it from the terminal
+Sys.setenv(MY_CACHE = my_cache)
+Sys.getenv("MY_CACHE")
+#> [1] "/tmp/RtmpGCSPzf/pins_cache"
 ```
 
-On the terminal I can now change directory to my pins\_cache, add all
-changes, commit, and inspect the log:
+From the terminal:
 
 ``` /bin/bash
-cd /tmp/Rtmpdrvnwb/pins_cache
+git init $MY_CACHE
+cd $MY_CACHE
 git add .
 git commit -m "Start tracking my cache with Git"
 ```

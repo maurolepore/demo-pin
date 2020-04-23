@@ -55,27 +55,22 @@ Consider a dataset stored online:
 You don't need pins to download or read this file. You may do it with `download.file()` and `read.csv()` (I prefer `readr::read_csv()`). But every time the process may potentially take a long time.
 
 ```{r, message=FALSE}
-raw_url <- 
-  "https://raw.githubusercontent.com/tidyverse/readr/master/inst/extdata/mtcars.csv"
-
-# First time
-system.time(read_csv(raw_url))
-
-# Second time
-system.time(read_csv(raw_url))
+url <- "https://raw.githubusercontent.com/tidyverse/readr/master/inst/extdata/mtcars.csv"
+url %>% read_csv()
 ```
 
-A better way is to `pin()` the URL.
+A better way is to `pin()` the URL, which creates a cache in a local "board" that you can later use.
 
 ```{r, message=FALSE}
-# First time
-system.time(read_csv(pin(raw_url)))
+url %>% pin("my_data")
 
-# Second time
-system.time(read_csv(pin(raw_url)))
+# Works from any R session
+my_data <- pin_get("my_data") %>% read_csv()
+my_data
 ```
+> `pin()` still works when working offline or when the remote resource becomes unavailable; when this happens, a warning will be triggered but your code will continue to work.
 
-The first time pins creates a cache in a local "board" and reuses it the second time -- which runs faster.
+The default location for the local-board cache is convenient and sensible.
 
 ```{r}
 board_default()
@@ -83,33 +78,17 @@ board_default()
 dir_tree(board_cache_path())
 ```
 
-The default location for the local-board cache is convenient and sensible, but you may want to instead use another location.
+But you may want to instead use another location, and enable [pins versions](https://pins.rstudio.com/articles/advanced-versions.html).
 
 ```{r}
 my_cache <- path(tempdir(), "pins_cache")
+
 board_register_local(
   name = "my_local_board", 
   cache = my_cache, 
   versions = TRUE
 )
-```
 
-`versions = TRUE` enables [pins versions](https://pins.rstudio.com/articles/advanced-versions.html).
-
-You can pin a dataset at different after you read it, and get it from your cache into any R session.
-
-```{r, message=FALSE}
-read_csv(raw_url) %>% 
-  pin(name = "my_data", board = "my_local_board")
-
-# Sometime, somewhere
-my_data <- pin_get(name = "my_data", board = "my_local_board")
-my_data
-```
-
-And you can pin different versions, which might be difficult or slow to re-compute.
-
-```{r, message=FALSE}
 my_data %>% 
   filter(cyl > 6) %>% 
   # Cache new version
@@ -138,14 +117,17 @@ dir_tree(my_cache)
 
 For more control, initialize a Git repository in your pins cache.
 
-```{r, engine="/bin/bash"}
-git init /tmp/Rtmpdrvnwb/pins_cache
+```{r}
+# Set environmental variable so I can use it from the terminal
+Sys.setenv(MY_CACHE = my_cache)
+Sys.getenv("MY_CACHE")
 ```
 
-On the terminal I can now change directory to my pins_cache, add all changes, commit, and inspect the log:
+From the terminal:
 
-```{r echo=TRUE, engine="/bin/bash"}
-cd /tmp/Rtmpdrvnwb/pins_cache
+```{r, engine="/bin/bash"}
+git init $MY_CACHE
+cd $MY_CACHE
 git add .
 git commit -m "Start tracking my cache with Git"
 ```
