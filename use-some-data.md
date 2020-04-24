@@ -1,17 +1,9 @@
-Using daily data I don’t control
+Pin volatile raw data to a board you control
 ================
 
 ``` r
+library(dplyr, warn.conflicts = FALSE)
 library(pins)
-library(tidyverse)
-#> ── Attaching packages ───────────────────────────────────────────────── tidyverse 1.3.0 ──
-#> ✓ ggplot2 3.3.0           ✓ purrr   0.3.4      
-#> ✓ tibble  3.0.1           ✓ dplyr   0.8.99.9002
-#> ✓ tidyr   1.0.2           ✓ stringr 1.4.0      
-#> ✓ readr   1.3.1           ✓ forcats 0.5.0
-#> ── Conflicts ──────────────────────────────────────────────────── tidyverse_conflicts() ──
-#> x dplyr::filter() masks stats::filter()
-#> x dplyr::lag()    masks stats::lag()
 ```
 
 Here is some data I don’t control:
@@ -20,17 +12,10 @@ Here is some data I don’t control:
 raw_url <- 
   "https://raw.githubusercontent.com/maurolepore/demo-data/master/some_data.csv"
 
-read_csv(raw_url)
-#> Parsed with column specification:
-#> cols(
-#>   x = col_double(),
-#>   y = col_character()
-#> )
-#> # A tibble: 2 x 2
-#>       x y    
-#>   <dbl> <chr>
-#> 1     1 a    
-#> 2     2 b
+read.csv(raw_url)
+#>   x  y
+#> 1 1  a
+#> 2 2  b
 ```
 
 It may become unavailable anytime, so I better pin it to a board I do
@@ -53,13 +38,10 @@ I’ll register a new GitHub board so I can use Git tools I already know.
 # bash
 gh repo create --public maurolepore/demo-gh-board
 gh repo view maurolepore/demo-gh-board
-maurolepore/demo-gh-board
-No description provided
-
-No README provided
-
-View this repository on GitHub: https://github.com/maurolepore/demo-gh-board
 ```
+
+([View this repository on
+GitHub](https://github.com/maurolepore/demo-gh-board))
 
 2.  I now register that repo as a new pins board.
 
@@ -76,11 +58,6 @@ pins::board_register_github(
   token = usethis::github_token(),  
   cache = path_pins_cache
 )
-
-# I shave not created this directory yet
-fs::dir_exists(path_pins_cache)
-#> /home/mauro/git/demo-pins/pins_cache 
-#>                                FALSE
 ```
 
 I pin the URL to the raw data to my board on GitHub.
@@ -130,22 +107,17 @@ pin_find("some", board = "demo-gh-board")
 
   - With the RStudio addin *Find Pins*:
 
-<img src=http://i.imgur.com/v1nSe43.png width=400 />
+<img src=http://i.imgur.com/v1nSe43.png width=600 />
 
   - From the tab *Connections*:
 
-<img src=http://i.imgur.com/2KU3b7a.png width=400 />
+<img src=http://i.imgur.com/2KU3b7a.png width=600 />
 
 And I can use the pin anywhere, anytime.
 
 ``` r
 path_some_data <- pins::pin_get("some_data", board = "demo-gh-board")
-some_data <- read_csv(path_some_data)
-#> Parsed with column specification:
-#> cols(
-#>   x = col_double(),
-#>   y = col_character()
-#> )
+some_data <- read.csv(path_some_data)
 ```
 
 I would also compute downstream datasets that may be slow to recompute.
@@ -166,56 +138,57 @@ What happens if the raw data becomes unavailable?
 # bash terminal
 cd ~/git/demo-data
 ls
-#> some_data.csv
-```
 
-``` bash
-# bash terminal
-git rm some_data.csv
+rm some_data.csv
+
 git add some_data.csv
 git commit -m "Destroy some_data.csv"
 git push
-#> fatal: pathspec 'some_data.csv' did not match any files
-#> fatal: pathspec 'some_data.csv' did not match any files
-#> On branch master
-#> Untracked files:
-#>  pins_cache/
-#>  use-some-data.Rmd
-#>  use-some-data.md
-#>  use-some-data_files/
-#> 
-#> nothing added to commit but untracked files present
-#> To github.com:maurolepore/demo-pin.git
-#>    688657d..1b69e2e  master -> master
+
+ls some_data.csv
+#> some_data.csv
+#> [master 61ebbf0] Destroy some_data.csv
+#>  1 file changed, 4 deletions(-)
+#>  delete mode 100644 some_data.csv
+#> To github.com:maurolepore/demo-data.git
+#>    835e360..61ebbf0  master -> master
+#> ls: cannot access 'some_data.csv': No such file or directory
 ```
 
-``` bash
-# bash terminal
-ls
-#> demo-pins.Rproj
-#> pins_cache
-#> pins.html
-#> README.md
-#> README.Rmd
-#> use-some-data_files
-#> use-some-data.md
-#> use-some-data.Rmd
+Reading directly from the source will fail, but reading via pins still
+works.
+
+``` r
+raw_url <- 
+  "https://raw.githubusercontent.com/maurolepore/demo-data/master/some_data.csv"
+
+# Fails
+raw_url %>% 
+  read.csv()
+#>   x  y
+#> 1 1  a
+#> 2 2  b
+
+# Works
+raw_url %>% 
+  pins::pin(
+    name = "some_data",
+    description = "Some raw data",
+    board = "demo-gh-board"
+  ) %>% 
+  read.csv()
+#>   x  y
+#> 1 1  a
+#> 2 2  b
 ```
 
 No problem, I can still get it.
 
 ``` r
-read_csv(pins::pin_get("some_data"))
-#> Parsed with column specification:
-#> cols(
-#>   x = col_double(),
-#>   y = col_character()
-#> )
-#> # A tibble: 2 x 2
-#>       x y    
-#>   <dbl> <chr>
-#> 1     1 a    
-#> 2     2 b
+read.csv(pins::pin_get("some_data"))
+#>   x  y
+#> 1 1  a
+#> 2 2  b
 ```
 
 ### Cleanup
@@ -224,31 +197,19 @@ read_csv(pins::pin_get("some_data"))
 # bash terminal
 cd ~/git/demo-data
 ls
-#> some_data.csv
-```
 
-``` bash
-# bash terminal
+cd ~/git/demo-data
 git revert HEAD -n
 git commit -am "Recover some_data"
 git push
-#> [master ddd6273] Recover some_data
-#>  2 files changed, 16 insertions(+), 44 deletions(-)
-#> To github.com:maurolepore/demo-pin.git
-#>    1b69e2e..ddd6273  master -> master
-```
 
-``` bash
-# bash terminal
-ls
-#> demo-pins.Rproj
-#> pins_cache
-#> pins.html
-#> README.md
-#> README.Rmd
-#> use-some-data_files
-#> use-some-data.md
-#> use-some-data.Rmd
+ls some_data.csv
+#> [master 998014d] Recover some_data
+#>  1 file changed, 4 insertions(+)
+#>  create mode 100644 some_data.csv
+#> To github.com:maurolepore/demo-data.git
+#>    61ebbf0..998014d  master -> master
+#> some_data.csv
 ```
 
 ``` r

@@ -1,11 +1,11 @@
 ---
-title: "Using daily data I don't control"
+title: "Pin volatile raw data to a board you control"
 output: github_document
 ---
 
 ```{r}
+library(dplyr, warn.conflicts = FALSE)
 library(pins)
-library(tidyverse)
 ```
 
 Here is some data I don't control:
@@ -14,7 +14,7 @@ Here is some data I don't control:
 raw_url <- 
   "https://raw.githubusercontent.com/maurolepore/demo-data/master/some_data.csv"
 
-read_csv(raw_url)
+read.csv(raw_url)
 ```
 
 It may become unavailable anytime, so I better pin it to a board I do control.
@@ -31,13 +31,9 @@ I'll register a new GitHub board so I can use Git tools I already know.
 # bash
 gh repo create --public maurolepore/demo-gh-board
 gh repo view maurolepore/demo-gh-board
-maurolepore/demo-gh-board
-No description provided
-
-No README provided
-
-View this repository on GitHub: https://github.com/maurolepore/demo-gh-board
 ```
+
+([View this repository on GitHub](https://github.com/maurolepore/demo-gh-board))
 
 2. I now register that repo as a new pins board.
 
@@ -52,14 +48,11 @@ pins::board_register_github(
   token = usethis::github_token(),  
   cache = path_pins_cache
 )
-
-# I shave not created this directory yet
-fs::dir_exists(path_pins_cache)
 ```
 
 I pin the URL to the raw data to my board on GitHub.
 
-```{r}
+```{r pin-some-data}
 some_data <- raw_url %>% 
   pins::pin(
     name = "some_data",
@@ -88,17 +81,17 @@ pin_find("some", board = "demo-gh-board")
 
 * With the RStudio addin _Find Pins_:
 
-<img src=http://i.imgur.com/v1nSe43.png width=400 />
+<img src=http://i.imgur.com/v1nSe43.png width=600 />
 
 * From the tab _Connections_:
 
-<img src=http://i.imgur.com/2KU3b7a.png width=400 />
+<img src=http://i.imgur.com/2KU3b7a.png width=600 />
 
 And I can use the pin anywhere, anytime.
 
 ```{r}
 path_some_data <- pins::pin_get("some_data", board = "demo-gh-board")
-some_data <- read_csv(path_some_data)
+some_data <- read.csv(path_some_data)
 ```
 
 I would also compute downstream datasets that may be slow to recompute.
@@ -115,29 +108,44 @@ some_data %>%
 
 What happens if the raw data becomes unavailable?
 
-```{bash engine='/bin/bash'}
+```{bash engine='/bin/bash', error=TRUE}
 # bash terminal
 cd ~/git/demo-data
 ls
-```
 
-```{bash engine='/bin/bash'}
-# bash terminal
-git rm some_data.csv
+rm some_data.csv
+
 git add some_data.csv
 git commit -m "Destroy some_data.csv"
 git push
+
+ls some_data.csv
 ```
 
-```{bash engine='/bin/bash'}
-# bash terminal
-ls
+Reading directly from the source will fail, but reading via pins still works.
+
+```{r error=TRUE, cache=FALSE}
+raw_url <- 
+  "https://raw.githubusercontent.com/maurolepore/demo-data/master/some_data.csv"
+
+# Fails
+raw_url %>% 
+  read.csv()
+
+# Works
+raw_url %>% 
+  pins::pin(
+    name = "some_data",
+    description = "Some raw data",
+    board = "demo-gh-board"
+  ) %>% 
+  read.csv()
 ```
 
 No problem, I can still get it.
 
 ```{r}
-read_csv(pins::pin_get("some_data"))
+read.csv(pins::pin_get("some_data"))
 ```
 
 ### Cleanup
@@ -146,18 +154,13 @@ read_csv(pins::pin_get("some_data"))
 # bash terminal
 cd ~/git/demo-data
 ls
-```
 
-```{bash engine='/bin/bash'}
-# bash terminal
+cd ~/git/demo-data
 git revert HEAD -n
 git commit -am "Recover some_data"
 git push
-```
 
-```{bash engine='/bin/bash'}
-# bash terminal
-ls
+ls some_data.csv
 ```
 
 ```{r}
