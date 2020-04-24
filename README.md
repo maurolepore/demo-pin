@@ -126,7 +126,10 @@ dir_tree(board_cache_path())
 #> ├── azure
 #> │   ├── data.txt
 #> │   ├── data.txt.lock
-#> │   └── iris
+#> │   ├── iris
+#> │   │   ├── data.rds
+#> │   │   └── data.txt
+#> │   └── mtcars
 #> │       ├── data.rds
 #> │       └── data.txt
 #> └── local
@@ -181,7 +184,7 @@ In case you are curious, this is the structure of pins versions.
 
 ``` r
 dir_tree(my_cache)
-#> /tmp/RtmpDffCsC/pins_cache
+#> /tmp/RtmpZZyaEz/pins_cache
 #> └── my_local_board
 #>     ├── data.txt
 #>     ├── data.txt.lock
@@ -208,7 +211,7 @@ For more control, initialize a Git repository in your pins cache.
 # Set environmental variable so I can use it from the terminal
 Sys.setenv(MY_CACHE = my_cache)
 Sys.getenv("MY_CACHE")
-#> [1] "/tmp/RtmpDffCsC/pins_cache"
+#> [1] "/tmp/RtmpZZyaEz/pins_cache"
 ```
 
 From the terminal:
@@ -274,7 +277,7 @@ cache.
 
 ``` r
 dir_tree(my_cache)
-#> /tmp/RtmpDffCsC/pins_cache
+#> /tmp/RtmpZZyaEz/pins_cache
 #> ├── my_github_board
 #> │   ├── data.txt
 #> │   ├── data.txt.lock
@@ -320,7 +323,7 @@ path(my_cache, "my_github_board", "my_data", "data.rds") %>% read_rds()
 Azure is important to us because the data managers use it. Data managers
 may then simply manage access permissions so the right people can access
 the data they need. Data users like analysts and software developers may
-then get the access key from Azure, store it safely in their file
+then get the access key from Azure, stor it safely in their file
 .Renviron (see
 [`usethis::edit_r_environ()`](https://usethis.r-lib.org/reference/edit.html)),
 and read and write data with `pins()`. This way we can use the same
@@ -353,24 +356,20 @@ board_register_azure()
 You can now pin resources to the Azure board.
 
 ``` r
-datasets::iris %>% 
-  pin(name = "iris", board = "azure", description = "My iris data")
-#> No encoding supplied: defaulting to UTF-8.
-
 datasets::mtcars %>% 
-  pin(name = "mtcars", board = "azure", description = "My mtcars data")
+  pin(name = "iris", board = "azure", description = "My mtcars")
 #> No encoding supplied: defaulting to UTF-8.
 ```
 
 And you can also find and get resources from the Azure board.
 
 ``` r
-pin_find("data", board = "azure")
+pin_find("mtcars", board = "azure")
 #> # A tibble: 2 x 4
-#>   name   description    type  board
-#>   <chr>  <chr>          <chr> <chr>
-#> 1 iris   My iris data   table azure
-#> 2 mtcars My mtcars data table azure
+#>   name   description                   type  board
+#>   <chr>  <chr>                         <chr> <chr>
+#> 1 iris   My mtcars                     table azure
+#> 2 mtcars The motor trend cars data set table azure
 
 pin_get("mtcars", board = "azure")
 #> # A tibble: 32 x 11
@@ -387,21 +386,6 @@ pin_get("mtcars", board = "azure")
 #>  9  22.8     4  141.    95  3.92  3.15  22.9     1     0     4     2
 #> 10  19.2     6  168.   123  3.92  3.44  18.3     1     0     4     4
 #> # … with 22 more rows
-```
-
-And you can also remove resources.
-
-``` r
-pin_remove(name = "mtcars", board = "azure")
-#> No encoding supplied: defaulting to UTF-8.
-#> No encoding supplied: defaulting to UTF-8.
-
-pin_find("data", board = "azure")
-#> No encoding supplied: defaulting to UTF-8.
-#> # A tibble: 1 x 4
-#>   name  description  type  board
-#>   <chr> <chr>        <chr> <chr>
-#> 1 iris  My iris data table azure
 ```
 
 ### Allows us to control permissions to read and write data
