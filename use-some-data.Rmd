@@ -1,0 +1,179 @@
+---
+title: "Using daily data I don't control"
+output: github_document
+---
+
+```{r}
+library(pins)
+library(tidyverse)
+```
+
+Here is some data I don't control:
+
+```{r}
+path_demo_data <- fs::path(tempdir(), "demo-data")
+fs::dir_create(path_demo_data)
+
+path_some_data <- fs::path(path_demo_data, "some_data.csv")
+
+"x,y\n1,2\n3,4" %>% 
+  read_csv() %>% 
+  write_csv(path)
+
+read_csv(path_some_data)
+```
+
+
+```{r}
+raw_url <- 
+  "https://raw.githubusercontent.com/maurolepore/demo-data/master/some_data.csv"
+
+read_csv(raw_url)
+```
+
+It may become unavailable anytime, so I better pin it to a board I do control.
+
+> `pin()` still works when working offline or when the remote resource becomes unavailable; when this happens, a warning will be triggered but your code will continue to work.
+
+-- `?pins::pin()`
+
+I'll register a new GitHub board so I can use Git tools I already know.
+
+1. I'll first create a GitHub repo. Do it however you like; I'll use the terminal.
+
+```bash
+# bash
+gh repo create --public maurolepore/demo-gh-board
+gh repo view maurolepore/demo-gh-board
+maurolepore/demo-gh-board
+No description provided
+
+No README provided
+
+View this repository on GitHub: https://github.com/maurolepore/demo-gh-board
+```
+
+2. I now register that repo as a new pins board.
+
+```{r}
+# The default cache is okay, but I include it here just because I can
+path_pins_cache <- fs::path(here::here(), "pins_cache")
+
+pins::board_register_github(
+  name = "demo-gh-board",
+  repo = "maurolepore/demo-gh-board",
+  # You should add GITHUB_PAT to .Renviron; see ?usethis::github_token()
+  token = usethis::github_token(),  
+  cache = path_pins_cache
+)
+
+# I shave not created this directory yet
+fs::dir_exists(path_pins_cache)
+```
+
+I pin the URL to the raw data to my board on GitHub.
+
+```{r}
+some_data <- raw_url %>% 
+  pins::pin(
+    name = "some_data",
+    description = "Some raw data",
+    board = "demo-gh-board"
+  )
+```
+
+Although I didn't explicitly read the data, pins stored it in its cache.
+
+```{r}
+fs::dir_tree(path_pins_cache)
+```
+
+> `pin()` allows you to cache remote resources and intermediate results with ease. When caching remote resources, usually URLs, it will check for HTTP caching headers to avoid re-downloading when the remote result has not changed.
+
+-- `?pins::pin()`
+
+I can later find `some_data` in multiple ways:
+
+* With pins:
+
+```{r}
+pin_find("some", board = "demo-gh-board")
+```
+
+* With the RStudio addin _Find Pins_:
+
+<img src=http://i.imgur.com/v1nSe43.png width=400 />
+
+* From the tab _Connections_:
+
+<img src=http://i.imgur.com/2KU3b7a.png width=400 />
+
+And I can use the pin anywhere, anytime.
+
+```{r}
+path_some_data <- pins::pin_get("some_data", board = "demo-gh-board")
+some_data <- read_csv(path_some_data)
+```
+
+I would also compute downstream datasets that may be slow to recompute.
+
+```{r}
+some_data %>% 
+  mutate(new_column = paste(x, y)) %>% 
+  pin(
+    name = "processed_data", 
+    description = "Something expensive to recreate",
+    board = "demo-gh-board"
+  )
+```
+
+What happens if the raw data becomes unavailable?
+
+```{bash engine='/bin/bash'}
+# bash terminal
+cd ~/git/demo-data
+ls
+```
+
+```{bash engine='/bin/bash'}
+# bash terminal
+git rm some_data.csv
+git add some_data.csv
+git commit -m "Destroy some_data.csv"
+git push
+```
+
+```{bash engine='/bin/bash'}
+# bash terminal
+ls
+```
+
+No problem, I can still get it.
+
+```{r}
+read_csv(pins::pin_get("some_data"))
+```
+
+### Cleanup
+
+```{bash engine='/bin/bash'}
+# bash terminal
+cd ~/git/demo-data
+ls
+```
+
+```{bash engine='/bin/bash'}
+# bash terminal
+git revert HEAD -n
+git commit -am "Recover some_data"
+git push
+```
+
+```{bash engine='/bin/bash'}
+# bash terminal
+ls
+```
+
+```{r}
+fs::dir_delete(path_pins_cache)
+```
