@@ -11,20 +11,6 @@ library(tidyverse)
 Here is some data I don't control:
 
 ```{r}
-path_demo_data <- fs::path(tempdir(), "demo-data")
-fs::dir_create(path_demo_data)
-
-path_some_data <- fs::path(path_demo_data, "some_data.csv")
-
-"x,y\n1,2\n3,4" %>% 
-  read_csv() %>% 
-  write_csv(path)
-
-read_csv(path_some_data)
-```
-
-
-```{r}
 raw_url <- 
   "https://raw.githubusercontent.com/maurolepore/demo-data/master/some_data.csv"
 
