@@ -1,0 +1,4 @@
+path: some_data.csv
+extension: csv
+description: Some raw data
+type: files

@@ -2,50 +2,28 @@ Pin volatile raw data to a board you control
 ================
 
 ``` r
-library(dplyr, warn.conflicts = FALSE)
+library(magrittr)
 library(pins)
 ```
 
-Here is some data I don’t control:
+Here is some data I (pretend) don’t control:
 
 ``` r
-raw_url <- 
+source_url <- 
   "https://raw.githubusercontent.com/maurolepore/demo-data/master/some_data.csv"
 
-read.csv(raw_url)
+read.csv(source_url)
 #>   x  y
 #> 1 1  a
 #> 2 2  b
 ```
 
-It may become unavailable anytime, so I better pin it to a board I do
-control.
+That raw data may become unavailable anytime, so I’ll pin it to a board
+I do control, for example, a github board.
 
-> `pin()` still works when working offline or when the remote resource
-> becomes unavailable; when this happens, a warning will be triggered
-> but your code will continue to work.
-
-– `?pins::pin()`
-
-I’ll register a new GitHub board so I can use Git tools I already know.
-
-1.  I’ll first create a GitHub repo. Do it however you like; I’ll use
-    the terminal.
-
-<!-- end list -->
-
-``` bash
-# bash
-gh repo create --public maurolepore/demo-gh-board
-gh repo view maurolepore/demo-gh-board
-```
-
-([View this repository on
-GitHub](https://github.com/maurolepore/demo-gh-board))
-
-2.  I now register that repo as a new pins board.
-
-<!-- end list -->
+First I create a GitHub repo, for example, at
+<https://github.com/maurolepore/demo-gh-board>. Then I register that
+repo as a pins board.
 
 ``` r
 # The default cache is okay, but I include it here just because I can
@@ -60,10 +38,10 @@ pins::board_register_github(
 )
 ```
 
-I pin the URL to the raw data to my board on GitHub.
+I pin to my github board the URL pointing to the volatile source data.
 
 ``` r
-some_data <- raw_url %>% 
+some_data <- source_url %>% 
   pins::pin(
     name = "some_data",
     description = "Some raw data",
@@ -79,6 +57,9 @@ fs::dir_tree(path_pins_cache)
 #> └── demo-gh-board
 #>     ├── data.txt
 #>     ├── data.txt.lock
+#>     ├── processed_data
+#>     │   ├── data.rds
+#>     │   └── data.txt
 #>     └── some_data
 #>         ├── data.txt
 #>         └── some_data.csv
@@ -116,15 +97,20 @@ pin_find("some", board = "demo-gh-board")
 And I can use the pin anywhere, anytime.
 
 ``` r
-path_some_data <- pins::pin_get("some_data", board = "demo-gh-board")
-some_data <- read.csv(path_some_data)
+some_data <- pins::pin_get("some_data", board = "demo-gh-board") %>% 
+  read.csv()
+
+some_data
+#>   x  y
+#> 1 1  a
+#> 2 2  b
 ```
 
-I would also compute downstream datasets that may be slow to recompute.
+I should also pin downstream datasets that may be slow to recompute.
 
 ``` r
 some_data %>% 
-  mutate(new_column = paste(x, y)) %>% 
+  transform(new_column = paste(x, y)) %>% 
   pin(
     name = "processed_data", 
     description = "Something expensive to recreate",
@@ -132,86 +118,76 @@ some_data %>%
   )
 ```
 
-What happens if the raw data becomes unavailable?
+What happens if the source data becomes unavailable, because the source
+data is deleted, you are offline, or whatever?
 
-``` bash
-# bash terminal
-cd ~/git/demo-data
-ls
+**HERE I TURN OFF MY CONNECTION TO INTERNET**
 
-rm some_data.csv
+  - Reading directly from the source fails:
 
-git add some_data.csv
-git commit -m "Destroy some_data.csv"
-git push
-
-ls some_data.csv
-#> some_data.csv
-#> [master 61ebbf0] Destroy some_data.csv
-#>  1 file changed, 4 deletions(-)
-#>  delete mode 100644 some_data.csv
-#> To github.com:maurolepore/demo-data.git
-#>    835e360..61ebbf0  master -> master
-#> ls: cannot access 'some_data.csv': No such file or directory
-```
-
-Reading directly from the source will fail, but reading via pins still
-works.
+<!-- end list -->
 
 ``` r
-raw_url <- 
-  "https://raw.githubusercontent.com/maurolepore/demo-data/master/some_data.csv"
-
-# Fails
-raw_url %>% 
+source_url %>% 
   read.csv()
-#>   x  y
-#> 1 1  a
-#> 2 2  b
+#> Error in file(file, "rt") : 
+#>   cannot open the connection to 'https://raw.githubusercontent.com/maurolepore/demo-data/master/some_data.csv'
+#> In addition: Warning message:
+#> In file(file, "rt") :
+#>   URL 'https://raw.githubusercontent.com/maurolepore/demo-data/master/some_data.c#> sv': status was 'Couldn't resolve host name'
+```
 
-# Works
-raw_url %>% 
-  pins::pin(
-    name = "some_data",
-    description = "Some raw data",
-    board = "demo-gh-board"
-  ) %>% 
+  - But I can still get the `some_data` via pin:
+
+<!-- end list -->
+
+``` r
+pins::pin_get(name = "some_data", board = "demo-gh-board") %>% 
   read.csv()
 #>   x  y
 #> 1 1  a
 #> 2 2  b
 ```
 
-No problem, I can still get it.
+The documentation says that “`pin()` still works when working offline or
+when the remote resource becomes unavailable; when this happens, a
+warning will be triggered but your code will continue to work”. I failed
+to confirm this behavior, but it relatively simple to first try reading
+from the source and on error retry reading from pins cache:
 
 ``` r
-read.csv(pins::pin_get("some_data"))
+tryCatch(
+  read.csv(source_url), 
+  error = function(e) {
+    read.csv(pins::pin_get(name = "some_data", board = "demo-gh-board"))
+  }
+)
 #>   x  y
 #> 1 1  a
 #> 2 2  b
 ```
 
-### Cleanup
+Whatever happens with the source data, I’m safe because I have two
+backups:
 
-``` bash
-# bash terminal
-cd ~/git/demo-data
-ls
+  - My local cache, which I can track with Git for extra safety.
 
-cd ~/git/demo-data
-git revert HEAD -n
-git commit -am "Recover some_data"
-git push
-
-ls some_data.csv
-#> [master 998014d] Recover some_data
-#>  1 file changed, 4 insertions(+)
-#>  create mode 100644 some_data.csv
-#> To github.com:maurolepore/demo-data.git
-#>    61ebbf0..998014d  master -> master
-#> some_data.csv
-```
+<!-- end list -->
 
 ``` r
-fs::dir_delete(path_pins_cache)
+fs::dir_tree(path_pins_cache)
+#> /home/mauro/git/demo-pins/pins_cache
+#> └── demo-gh-board
+#>     ├── data.txt
+#>     ├── data.txt.lock
+#>     ├── processed_data
+#>     │   ├── data.rds
+#>     │   └── data.txt
+#>     └── some_data
+#>         ├── data.txt
+#>         └── some_data.csv
 ```
+
+  - And the GitHub board at
+    <https://github.com/maurolepore/demo-gh-board>, which is a normal
+    GitHub repo so I can also check previous versions with Git.

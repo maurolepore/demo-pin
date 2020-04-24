@@ -1,0 +1,11 @@
+path:
+- data.csv
+- data.rds
+rows: 2
+cols: 3
+columns:
+  x: integer
+  'y': factor
+  new_column: factor
+description: Something expensive to recreate
+type: table

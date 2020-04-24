@@ -1,0 +1,22 @@
+- name: some_data
+  path: some_data
+  cache:
+  - etag: W/"4a1652ef11fa404e955158f4cc1c23401423c3e4998218e568e1a6c6bdc8d1dc"
+    max_age: 300.0
+    change_age: 1.5877616e+09
+    url: https://raw.githubusercontent.com/maurolepore/demo-gh-board/master/some_data/data.txt
+  - etag: W/"00973160d7e9f4bfb05333ec7153248cb97d85768b1652b2a4692d3e08515342"
+    max_age: 300.0
+    change_age: 1.5877616e+09
+    url: https://raw.githubusercontent.com/maurolepore/demo-gh-board/master/some_data/some_data.csv
+- name: processed_data
+  path: processed_data
+  cache:
+  - etag: W/"72b3003a14f230eeecf04e7ff71b2647cb62331937c83b8a1f9eb73e4c88e922"
+    max_age: 300.0
+    change_age: 1.5877616e+09
+    url: https://raw.githubusercontent.com/maurolepore/demo-gh-board/master/processed_data/data.txt
+  - etag: W/"ea1822ce08694f6914757c1d819c7bffbf84b8571808e909c79d9ec42ffcdb0a"
+    max_age: 300.0
+    change_age: 1.5877616e+09
+    url: https://raw.githubusercontent.com/maurolepore/demo-gh-board/master/processed_data/data.rds
